@@ -1,5 +1,25 @@
-<aura:component>
-    <h1> Hello world ! </h1>
-    <p>Welcome all</p>
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes" 
+				access="global" controller="AccountController">
+<!--ltng:require styles="/resource/SLDS0122/assets/styles/salesforce-lightning-design-system.min.css"/-->
+    <aura:attribute name="newAccount" type="Account"
+     default="{ 'sobjectType': 'Account',
+                     'Name': '',
+                   }"/>
+<div>
+<form>
+      <ui:inputText aura:id="AccountName" label="New Account Name"
+                    class="slds-input"
+                    labelClass="slds-form-element__label"
+                    value="{!v.newAccount.Name}"
+                    required="true"/>
 
-</aura:component>	
+<ui:button label="Submit" 
+                   class="slds-button slds-button--neutral"
+                   labelClass="label"
+                   press="{!c.createAccount}"/>
+          <ui:button label="Cancel" 
+                   class="slds-button slds-button--neutral"
+                   labelClass="label" press="{!c.Close}"/>
+</form>
+    </div>
+</aura:component>
