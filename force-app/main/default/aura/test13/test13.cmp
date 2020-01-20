@@ -1,3 +1,197 @@
-<aura:component>
-
-</aura:component>	
+<aura:component implements="flexipage:availableForAllPageTypes,force:appHostable" 
+                controller="JSONDeserialize" access="global">
+    <aura:attribute name="allQuestions" type="QuestionForm[]" default="[]" />
+    <aura:attribute name="optionSelected" type="String" />
+    <aura:attribute name="answer" type="String" />
+    <aura:attribute name="ansTypeList" type="List"/>
+    <aura:attribute name="save" type="Boolean" default="true"/>
+    <aura:attribute name="status" type="String" />
+    <aura:attribute name="disableNextButton" type="Boolean" default="true"/>
+    <aura:attribute name="previous" type="Boolean" default="true"/>
+    <aura:attribute name="startTest" type="Boolean" default="false"/>
+    <aura:attribute name="storescore" type="TestResult__c" default="{ 'sobjectType': 'TestResult__c',
+                                                                    'Score_Obtained__c': ' ' }"/> 
+    <aura:attribute name="isModalOpen" type="Boolean" default="false"/>
+    <aura:attribute name="quizScore" type="integer" default="0"/>
+    <aura:attribute name="spinner" type="boolean" default="FALSE"/>
+    <aura:attribute name="unattemptedQues" type="string"/>
+    <aura:attribute name="correctAns" type="string"/>
+    <aura:attribute name="unCorrectAns" type="string"/>
+    <aura:attribute name="userContactId" type="string"/>
+    
+    <!-- PAGINATION -->
+    
+    <aura:attribute name="paginationList" type="QuestionForm[]"/>
+    <aura:attribute name="totalSize" type="integer" default="10"/>
+    <aura:attribute name="start" type="integer" default="0"/>
+    <aura:attribute name="end" type="integer"/>
+    <aura:attribute name="pageSize" type="integer" default="5"/>
+    
+    <!-- SPINNER -->
+    
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    
+    <!-- FORM -->
+    
+    <aura:attribute name="fname" type="string" />
+    <aura:attribute name="lname" type="string" /> 
+    <aura:attribute name="phone" type="string" /> 
+    <aura:attribute name="email" type="string" /> 
+                    
+    <div class="slds-p-around_x-large">
+    <lightning:card title="Contact Details">
+        <div class="slds-p-vertical_x-large">
+            
+            <form>
+                <lightning:input aura:id="field" name="firstName" label="First Name"
+                                 value="{!v.fname}" required="true"/>
+                <lightning:input aura:id="field1" name="lastName" label="Last Name"
+                                 value="{!v.lname}" required="true"/>  
+                <lightning:input aura:id="field2" name="phone" label="Phone"
+                                 value="{!v.phone}"/>
+                <lightning:input aura:id="field3" name="email" label="Email"
+                                 value="{!v.email}" required="true"/>
+                      
+            </form>
+            <br/>
+            
+            <!--lightning:button name="logIn" label="LogIn" title="Login to start quiz" 
+                              onclick="{!c.logInn}" variant="brand"/>
+            <lightning:button name="signUp" label="Sign Up" title="Create new account" 
+                              onclick="{!c.signUpp}" variant="neutral"/-->
+            </div>
+        
+    </lightning:card>
+    </div>
+    
+    <!-- Timer -->
+    
+    <aura:attribute name="endTime" type="Integer" default="1800000"/>
+    <aura:attribute name="timeLeft" type="string"/>
+    <aura:handler name="change" value="{!v.endTime}" action="{!c.handleValueChange}"/>
+    
+    <aura:if isTrue="{!!empty(v.paginationList)}">
+        <div class="slds-clearfix">
+            <div class="slds-float_right">
+                <lightning:tile label="Time Left" class="slds-page-header">
+                    {!v.timeLeft}
+                </lightning:tile>
+            </div>
+        </div>
+    </aura:if>
+    
+    <!--loading spinner start-->
+    
+    <aura:if isTrue="{!v.spinner}">
+        <div aura:id="spinnerId" class="slds-spinner_container">
+            <div class="slds-spinner--brand  slds-spinner slds-spinner--large slds-is-relative" 
+                 role="alert">
+                <span class="slds-assistive-text">Loading...</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </aura:if>
+    <!-- Loading spinner end-->   
+    
+    <!--POP UP BOX-->
+    
+    <aura:if isTrue="{!v.isModalOpen}">
+        <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" 
+                 aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open"
+                 aria-hidden="true">
+            <div class="slds-modal__container">
+                <!-- ###### MODAL BOX HEADER Start ######-->
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon iconName="utility:close"
+                                          onclick="{! c.closeModel }"
+                                          alternativeText="close"
+                                          variant="bare-inverse"
+                                          class="slds-modal__close"/>
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                       Result {!v.status} </h2>
+                </header>
+                <!--###### MODAL BOX BODY Part Start######-->
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <p><b>
+                        <i>Total Questions</i>        : {!v.totalSize} <br/>
+                        <i>Questions Attempted</i>    : {!(v.totalSize-v.unattemptedQues)}<br/>
+                        <i>Questions Unattempted</i>  : {!v.unattemptedQues}<br/>
+                        <i>Correct Answers</i>        : {!v.correctAns}<br/>
+                        <i>Wrong Answers</i>          : {!v.unCorrectAns}<br/>
+                        <i>Your Score</i>             : {!v.quizScore} <br/>
+                        </b></p>
+                </div>
+                <!--###### MODAL BOX FOOTER Part Start ######-->
+                <footer class="slds-modal__footer">
+                    <lightning:button variant="neutral" 
+                                      label="OK"
+                                      title="OK"
+                                      onclick="{!c.ok }"/>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    <!--POP UP BOX END-->
+    
+    <!--Custom Label-->
+    
+    <aura:if isTrue="{!empty(v.paginationList)}">
+        <div style="font-weight:bold;">
+        <ui:outputText value="{!$Label.c.test13_General_Instruction}"/>
+            <br/>
+            <br/>
+        <ui:outputText value="{!$Label.c.test13_General_Instruction1}"/>
+        </div>
+    </aura:if>
+    
+    <!--Custom Label Close-->
+    
+    <div class="slds-show" aura:id="divStartTest" style="height:10%; 
+                                                         width:10%;      
+                                                         margin-left:auto; 
+                                                         margin-right:auto;
+                                                         padding-top: 50px;
+                                                         font-size: 100%; ">
+        
+        <lightning:button name="startbutton" variant="brand" label="Start Test" 
+                          onclick="{!c.getAllQuestions}" disabled="{!v.startTest}" 
+                          title="Click button to start test"  />      
+        
+    </div>
+    <aura:iteration items="{!v.paginationList}" var="item" indexVar="index">
+        
+        <div class="slds-p-around_small" >
+            <lightning:card title= "{!(v.start+index+1)}" footer="" iconName="standard:education">
+                <div class="slds-border_bottom, slds-box slds-box_x-small" >
+                    <br/><ui:outputText value="{!((v.start+index+1) +' : '+ item.question)}"/>
+                </div>   
+                <lightning:radioGroup style="padding-left:10px;" aura:id="{!item.id}" 
+                                      name="{!item.question}" options="{!item.opts}" 
+                                      type="radio" value="{!item.optionSelected}" />
+                <br/><br/>
+            </lightning:card>
+        </div>
+        
+    </aura:iteration>
+    <div class="slds-hide" aura:id="divChangeState" style="height:50px; width:20%; 
+                                                           margin-left:auto; 
+                                                           margin-right:auto;">
+        
+        <lightning:button name="previousbutton" label="Previous" title="Go to Previous page" 
+                          onclick="{!c.previous}" disabled="{!v.start == 0}" 
+                          variant="neutral"/>
+        
+        <lightning:button name="savebutton" label="Submit" title="Submit your answers!" 
+                          onclick="{!c.submit}" disabled="{!v.save}" 
+                          variant="neutral"/>
+        
+        <lightning:button name="nextbutton" label="Next" title="Go to next page" 
+                          iconPosition="right"  onclick="{!c.next}"  
+                          disabled="{!v.disableNextButton}" variant="neutral"/>
+        
+    </div>     
+    
+</aura:component>
