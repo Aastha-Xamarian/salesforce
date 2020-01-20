@@ -1,0 +1,19 @@
+<aura:component >
+	
+    <aura:attribute name="No1" type="integer" access="public"/>
+    <aura:attribute name="No2" type="integer" access="public"/>
+    <aura:attribute name="No3" type="integer" access="public"/>
+    
+    <lightning:input type="integer" value="{!v.No1}" label="Enter first number" required="true"/>
+    <lightning:input type="integer" value="{!v.No2}" label="Enter second number" required="true"/>
+    
+    Output is : {!v.No3}
+    <br/>
+    <br/>
+    
+    <lightning:button label="Add" onclick="{!c.OnAdd}" value="add"/>
+    <lightning:button label="Subtract" onclick="{!c.OnSub}" value="sub"/>
+    <lightning:button label="Multiply" onclick="{!c.OnMul}" value="mul"/>
+    <lightning:button label="Divide" onclick="{!c.OnDiv}" value="div"/>
+    
+</aura:component>
